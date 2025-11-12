@@ -1,140 +1,163 @@
-// src/hooks/useTeachableMachine.js
+import { useState, useRef, useEffect } from "react";
+import * as tmPose from "@teachablemachine/pose";
+import * as tf from "@tensorflow/tfjs";
 
-import { useState, useEffect, useRef } from 'react';
-import * as tmPose from '@teachablemachine/pose'; 
-
-// ⚠️ AJUSTA ESTA VARIABLE CON LA RUTA DE TU MODELO
-const URL = "/my_model/"; 
-const THRESHOLD = 0.9; // Confianza mínima requerida (puedes ajustarla)
-
-let model, webcam, maxPredictions;
-const size = 200; // Dimensiones de la cámara/canvas
+const MODEL_URL = "/model/"; // Asegúrate que tu modelo esté en public/model/
+const THRESHOLD = 0.8; // Sensibilidad mínima para aceptar una seña
 
 export default function useTeachableMachine() {
   const [isModelLoading, setIsModelLoading] = useState(true);
   const [isCameraLoading, setIsCameraLoading] = useState(false);
-  const [signPrediction, setSignPrediction] = useState(null);
-  const [labels, setLabels] = useState([]); // 👈 ESTADO PARA LAS ETIQUETAS
-  const rafRef = useRef(null); 
-  const modelLoadedRef = useRef(false);
+  const [signPrediction, setSignPrediction] = useState("...");
+  const [labels, setLabels] = useState([]);
 
-  // 1. Cargar el Modelo y las Etiquetas
+  const webcamRef = useRef(null);
+  const rafRef = useRef(null);
+
+  let model = useRef(null);
+  let webcam = useRef(null);
+
+  // 📦 Cargar modelo Teachable Machine
   useEffect(() => {
-    async function loadModel() {
-      if (modelLoadedRef.current) return;
-      
+    const loadModel = async () => {
       try {
-        const modelURL = URL + "model.json";
-        const metadataURL = URL + "metadata.json";
-
-        // Carga el modelo
-        model = await tmPose.load(modelURL, metadataURL);
-        maxPredictions = model.getTotalClasses();
-        
-        // 🚨 LECTURA DE METADATOS PARA OBTENER LAS ETIQUETAS
-        const response = await fetch(metadataURL);
-        const metadata = await response.json();
-        
-        // Almacena las etiquetas (clases)
-        setLabels(metadata.labels); 
-        
-        modelLoadedRef.current = true;
-        
-        console.log("Modelo y etiquetas de Teachable Machine cargados con éxito.");
+        console.log("📦 Cargando modelo...");
+        const loadedModel = await tmPose.load(
+          MODEL_URL + "model.json",
+          MODEL_URL + "metadata.json"
+        );
+        model.current = loadedModel;
+        setLabels(loadedModel.getClassLabels());
         setIsModelLoading(false);
+        console.log(
+          "✅ Modelo cargado correctamente:",
+          loadedModel.getClassLabels()
+        );
       } catch (error) {
-        console.error("Error al cargar el modelo o metadatos. Revisa la ruta '/my_model/'", error);
+        console.error("❌ Error al cargar el modelo:", error);
         setIsModelLoading(false);
       }
-    }
+    };
+
     loadModel();
-    
-    return () => { modelLoadedRef.current = false; };
+
+    return () => {
+      stopCamera();
+      model.current = null;
+      webcam.current = null;
+    };
   }, []);
 
-  // 2. Inicializar la Webcam
+  // 🎥 Iniciar cámara
   const startCamera = async () => {
-    if (isModelLoading || isCameraLoading) return;
-
     try {
-      const videoElement = document.getElementById("webcam");
-      const flip = true; 
-      
-      webcam = new tmPose.Webcam(size, size, flip); 
-      await webcam.setup({ videoElement }); 
-      await webcam.play();
-
+      console.log("🎥 Iniciando cámara...");
       setIsCameraLoading(true);
-      setSignPrediction(null);
-      
-      // Iniciar el bucle de predicción continuo
+
+      const videoElement = document.getElementById("webcam");
+      if (!videoElement) {
+        console.warn("⚠️ No se encontró el elemento <video id='webcam'>");
+        setIsCameraLoading(false);
+        return;
+      }
+
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { width: 400, height: 400 },
+      });
+
+      videoElement.srcObject = stream;
+      webcamRef.current = videoElement;
+
+      webcam.current = new tmPose.Webcam(400, 400, true); // ancho, alto, flip horizontal
+      await webcam.current.setup();
+      await webcam.current.play();
+
+      videoElement.srcObject = webcam.current.webcam.srcObject;
+
+      console.log("✅ Cámara lista, iniciando predicciones...");
       predictLoop();
-      
-    } catch (error) {
-      console.error("No se pudo iniciar la cámara. ¿Permitiste el acceso?", error);
+    } catch (err) {
+      console.error("❌ Error al iniciar la cámara:", err);
       setIsCameraLoading(false);
     }
   };
 
-  // 3. El Bucle de Predicción (CONTINUO)
+  // 🔁 Bucle de predicciones
   const predictLoop = async () => {
-    if (!webcam || !model) {
-        rafRef.current = window.requestAnimationFrame(predictLoop);
-        return;
-    }
-    
-    webcam.update(); 
-    
-    const { posenetOutput } = await model.estimatePose(webcam.canvas);
-    const prediction = await model.predict(posenetOutput);
+    if (!model.current || !webcam.current) return;
 
-    let maxProb = 0;
-    let predictionClass = null;
+    try {
+      webcam.current.update();
 
-    for (let i = 0; i < maxPredictions; i++) {
+      const { posenetOutput } = await model.current.estimatePose(
+        webcam.current.canvas
+      );
+      const prediction = await model.current.predict(posenetOutput);
+
+      let maxProb = 0;
+      let predictionClass = null;
+
+      for (let i = 0; i < prediction.length; i++) {
         const prob = prediction[i].probability;
         if (prob > maxProb) {
-            maxProb = prob;
-            predictionClass = prediction[i].className;
+          maxProb = prob;
+          predictionClass = prediction[i].className;
         }
-    }
-    
-    // Si la confianza es alta, ACTUALIZA la predicción, pero NO DETIENE LA CÁMARA.
-    if (maxProb > THRESHOLD) {
-      setSignPrediction(predictionClass);
-    } else {
-      setSignPrediction("...");
-    }
-    
-    // Continúa el bucle SIEMPRE
-    rafRef.current = window.requestAnimationFrame(predictLoop);
-  };
-  
-  // 4. Detener la cámara y el bucle
-  const stopCamera = () => {
-    if (rafRef.current) {
-        window.cancelAnimationFrame(rafRef.current);
-        rafRef.current = null;
-    }
-    if (webcam && webcam.webcam) { 
-      webcam.stop();
-    }
-    setIsCameraLoading(false);
-    setSignPrediction(null);
-  };
-  
-  // 5. Limpieza al desmontar el componente
-  useEffect(() => {
-    return () => stopCamera();
-  }, []);
+      }
 
+      if (maxProb > THRESHOLD) {
+        setSignPrediction(predictionClass);
+        console.log(
+          "🧠 Señal detectada:",
+          predictionClass,
+          "(",
+          maxProb.toFixed(2),
+          ")"
+        );
+      } else {
+        setSignPrediction("...");
+      }
+
+      rafRef.current = requestAnimationFrame(predictLoop);
+    } catch (err) {
+      console.warn("⚠️ Error en el ciclo de predicción:", err);
+      stopCamera();
+    }
+  };
+
+  // 🛑 Detener cámara y limpiar recursos
+  const stopCamera = () => {
+    try {
+      console.log("🛑 Deteniendo cámara...");
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
+
+      if (webcam.current?.webcam?.srcObject) {
+        webcam.current.webcam.srcObject
+          .getTracks()
+          .forEach((track) => track.stop());
+      }
+
+      if (webcam.current) {
+        webcam.current.stop();
+      }
+
+      webcam.current = null;
+      setIsCameraLoading(false);
+      console.log("✅ Cámara detenida completamente.");
+    } catch (err) {
+      console.error("❌ Error al detener la cámara:", err);
+    }
+  };
 
   return {
+    isModelLoading,
+    isCameraLoading,
     signPrediction,
+    labels,
     startCamera,
     stopCamera,
-    isCameraLoading,
-    isModelLoading,
-    labels, // 👈 DEVOLVEMOS LAS ETIQUETAS
   };
 }

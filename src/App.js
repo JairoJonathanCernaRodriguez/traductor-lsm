@@ -3,7 +3,31 @@ import { FiRefreshCw } from "react-icons/fi";
 import useTeachableMachine from "./hooks/useTeachableMachine";
 
 // 🚨 PALABRAS MANUALES 🚨
-const MANUAL_LABELS = ["gracias", "por favor", "si", "no", "biblioteca"];
+const MANUAL_LABELS = [
+  "agua",
+  "ayudame",
+  "basura",
+  "biblioteca",
+  "clases",
+  "classroom",
+  "cocinar",
+  "compañero",
+  "computadora",
+  "cuaderno",
+  "edificio",
+  "emergenncia",
+  "escribir",
+  "gracias",
+  "internet",
+  "jabon",
+  "jardin",
+  "maestro",
+  "no",
+  "pizarron",
+  "salon de clases",
+  "si",
+  "tarea",
+];
 
 // Función para generar la ruta del video basándose en la etiqueta de la clase
 const getAssetPath = (label) => {

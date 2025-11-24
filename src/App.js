@@ -15,7 +15,7 @@ const MANUAL_LABELS = [
   "computadora",
   "cuaderno",
   "edificio",
-  "emergenncia",
+  "emergencia",
   "escribir",
   "gracias",
   "internet",
@@ -24,12 +24,22 @@ const MANUAL_LABELS = [
   "maestro",
   "no",
   "pizarron",
-  "salon de clases",
   "si",
   "tarea",
+  "semana",
+  "hola como estas",
+  "buenas tardes",
+  "salon de clases",
+  "buenos dias",
+  "donde esta",
+  "entendi la informacion",
+  "necesito ir a la cafeteria",
+  "necesito ir al baño",
+  "necesito un libro",
+  "no tengo clara la informacion",
 ];
 
-// Función para generar la ruta del video basándose en la etiqueta de la clase
+// Generar ruta del video
 const getAssetPath = (label) => {
   const cleanLabel = label.toLowerCase().trim().replace(/\s/g, "");
   return `/videos/${cleanLabel}.mp4`;
@@ -39,6 +49,9 @@ export default function App() {
   const [spanishText, setSpanishText] = useState("");
   const [videoSource, setVideoSource] = useState(null);
   const [isSwapped, setIsSwapped] = useState(false);
+
+  // 📌 Estado que guarda tamaño REAL del video
+  const [videoSize, setVideoSize] = useState({ width: 16, height: 9 });
 
   const {
     signPrediction,
@@ -51,14 +64,13 @@ export default function App() {
 
   const MASTER_LABELS = [...new Set([...labels, ...MANUAL_LABELS])];
 
-  // 🔁 Actualiza texto cuando hay predicción en modo cámara
+  // Actualiza texto cuando hay predicción
   useEffect(() => {
     if (signPrediction && signPrediction !== "..." && isSwapped) {
       setSpanishText(signPrediction);
     }
   }, [signPrediction, isSwapped]);
 
-  // 🔄 Intercambio Español ↔ Señas
   const handleSwap = () => {
     stopCamera();
     setSpanishText("");
@@ -66,10 +78,8 @@ export default function App() {
     setIsSwapped(!isSwapped);
   };
 
-  // 🧠 Lógica de traducción
   const handleTranslate = () => {
     if (!isSwapped) {
-      // Español → Señas
       const textToMatch = spanishText.toLowerCase().trim();
       const matchingLabel = MASTER_LABELS.find(
         (label) => label.toLowerCase().trim() === textToMatch
@@ -82,17 +92,15 @@ export default function App() {
         setVideoSource(null);
       }
     } else {
-      // Señas → Español (activa cámara)
       if (!isCameraLoading && !isModelLoading) {
         startCamera();
       }
     }
   };
 
-  // 🔹 Permitir Enter para traducir automáticamente
   const handleKeyPress = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault(); // evita salto de línea
+      e.preventDefault();
       handleTranslate();
     }
   };
@@ -106,9 +114,8 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 p-4">
-      {/* Contenedor principal */}
       <div className="relative flex flex-col md:flex-row items-center gap-6 w-full max-w-6xl">
-        {/* Cuadro Español */}
+        {/* ESPAÑOL */}
         <div
           className={`flex-1 p-6 rounded-xl shadow-lg transition-all duration-500 ${
             isSwapped ? "order-2 bg-white" : "order-1 bg-blue-50"
@@ -121,11 +128,11 @@ export default function App() {
             value={spanishText}
             disabled={isSwapped && isCameraLoading}
             onChange={(e) => setSpanishText(e.target.value)}
-            onKeyDown={handleKeyPress} // 👈 aquí agregamos el Enter
+            onKeyDown={handleKeyPress}
           />
         </div>
 
-        {/* Botón central de intercambio */}
+        {/* BOTÓN CENTRAL */}
         <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 md:-translate-y-0 md:top-auto md:translate-y-0">
           <button
             onClick={handleSwap}
@@ -135,7 +142,7 @@ export default function App() {
           </button>
         </div>
 
-        {/* Cuadro Lengua de Señas */}
+        {/* SEÑAS */}
         <div
           className={`flex-1 p-6 rounded-xl shadow-lg transition-all duration-500 ${
             isSwapped ? "order-1 bg-blue-50" : "order-2 bg-white"
@@ -146,21 +153,19 @@ export default function App() {
           </h2>
 
           {isSwapped ? (
-            // 📹 Señas → Español
+            // 📹 Cámara
             <div className="w-full h-80 flex flex-col items-center justify-center border border-gray-300 rounded-lg bg-black overflow-hidden">
               <video
                 id="webcam"
                 autoPlay
                 playsInline
                 muted
-                width="350"
-                height="350"
                 className="mx-auto rounded-lg"
                 style={{
                   objectFit: "cover",
                   backgroundColor: "black",
                   border: "2px solid #444",
-                  transform: "scaleX(-1)", // 👈 aquí quitamos el espejo
+                  transform: "scaleX(-1)",
                 }}
               ></video>
 
@@ -172,20 +177,26 @@ export default function App() {
               )}
             </div>
           ) : (
-            // Español → Señas
-            <div className="w-full h-32 flex items-center justify-center border border-gray-300 rounded-lg bg-white text-4xl text-gray-400">
+            // 📼 VIDEO DINÁMICO
+            <div
+              className="w-full border border-gray-300 rounded-lg bg-white flex items-center justify-center"
+              style={{
+                aspectRatio: `${videoSize.width} / ${videoSize.height}`,
+              }}
+            >
               {videoSource ? (
                 <video
                   key={videoSource}
-                  width="100%"
-                  height="100%"
                   autoPlay
                   loop
                   muted
-                  className="object-contain"
+                  className="w-full h-full object-contain"
+                  onLoadedMetadata={(e) => {
+                    const { videoWidth, videoHeight } = e.target;
+                    setVideoSize({ width: videoWidth, height: videoHeight });
+                  }}
                 >
                   <source src={videoSource} type="video/mp4" />
-                  Tu navegador no soporta el tag de video.
                 </video>
               ) : (
                 <span className="text-base text-gray-400">
@@ -197,7 +208,7 @@ export default function App() {
         </div>
       </div>
 
-      {/* Botón Traducir / Reconocer */}
+      {/* BOTÓN TRADUCIR / RECONOCER */}
       <button
         onClick={handleTranslate}
         disabled={
@@ -212,7 +223,6 @@ export default function App() {
         {getButtonText()}
       </button>
 
-      {/* Botón Detener */}
       {isSwapped && isCameraLoading && (
         <button
           onClick={stopCamera}

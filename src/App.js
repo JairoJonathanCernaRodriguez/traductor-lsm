@@ -6,11 +6,29 @@ import useTeachableMachine from "./hooks/useTeachableMachine";
 // --- DATOS DEL EQUIPO DE VIDEOS (Español -> LSM) ---
 // Lista de palabras que tienen video disponible en la carpeta /public/videos/
 const MANUAL_LABELS = [
-  "agua", "ayudame", "basura", "biblioteca", "clases", 
-  "classroom", "cocinar", "compañero", "computadora", 
-  "cuaderno", "edificio", "emergenncia", "escribir", 
-  "gracias", "internet", "jabon", "jardin", "maestro", 
-  "no", "pizarron", "salon de clases", "si", "tarea"
+  "agua",
+  "ayudame",
+  "basura",
+  "biblioteca",
+  "clases",
+  "classroom",
+  "cocinar",
+  "compañero",
+  "computadora",
+  "cuaderno",
+  "edificio",
+  "emergenncia",
+  "escribir",
+  "gracias",
+  "internet",
+  "jabon",
+  "jardin",
+  "maestro",
+  "no",
+  "pizarron",
+  "salon de clases",
+  "si",
+  "tarea",
 ];
 
 // Función auxiliar para limpiar texto y buscar el archivo
@@ -21,19 +39,19 @@ const getAssetPath = (label) => {
 
 export default function App() {
   // --- ESTADOS GLOBALES ---
-  const [spanishText, setSpanishText] = useState("");       // Texto input del usuario
-  const [videoSource, setVideoSource] = useState(null);     // Ruta del video a reproducir
-  const [isSwapped, setIsSwapped] = useState(false);        // FALSE = Texto->Seña | TRUE = Seña->Texto
-  const [errorMessage, setErrorMessage] = useState(null);   // Para mensajes de error
+  const [spanishText, setSpanishText] = useState(""); // Texto input del usuario
+  const [videoSource, setVideoSource] = useState(null); // Ruta del video a reproducir
+  const [isSwapped, setIsSwapped] = useState(false); // FALSE = Texto->Seña | TRUE = Seña->Texto
+  const [errorMessage, setErrorMessage] = useState(null); // Para mensajes de error
 
   // --- INTEGRACIÓN DEL EQUIPO DE IA (LSM -> Español) ---
   const {
-    signPrediction,   // Predicción actual (ej: "AGUA")
-    startCamera,      // Función para prender cámara
-    stopCamera,       // Función para apagar cámara
-    isCameraLoading,  // Estado de carga de cámara
-    isModelLoading,   // Estado de carga del modelo
-    labels,           // Etiquetas que conoce el modelo
+    signPrediction, // Predicción actual (ej: "AGUA")
+    startCamera, // Función para prender cámara
+    stopCamera, // Función para apagar cámara
+    isCameraLoading, // Estado de carga de cámara
+    isModelLoading, // Estado de carga del modelo
+    labels, // Etiquetas que conoce el modelo
   } = useTeachableMachine();
 
   // Combinamos las etiquetas del modelo con las manuales para búsqueda robusta
@@ -43,10 +61,10 @@ export default function App() {
 
   // 1. Cambiar de Modo (El botón del centro)
   const handleSwap = () => {
-    stopCamera();           // Importante: Apagar cámara al cambiar de modo
-    setSpanishText("");     // Limpiar texto
-    setVideoSource(null);   // Limpiar video
-    setErrorMessage(null);  // Limpiar errores
+    stopCamera(); // Importante: Apagar cámara al cambiar de modo
+    setSpanishText(""); // Limpiar texto
+    setVideoSource(null); // Limpiar video
+    setErrorMessage(null); // Limpiar errores
     setIsSwapped(!isSwapped);
   };
 
@@ -55,7 +73,7 @@ export default function App() {
     if (!isSwapped) {
       // MODO A: Español -> LSM (Texto a Video)
       const textToMatch = spanishText.toLowerCase().trim();
-      
+
       // Buscamos si la palabra existe en nuestra lista
       const matchingLabel = MASTER_LABELS.find(
         (label) => label.toLowerCase().trim() === textToMatch
@@ -81,7 +99,7 @@ export default function App() {
   // Permite usar la tecla Enter para activar
   const handleKeyPress = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault(); 
+      e.preventDefault();
       handleTranslate();
     }
   };
@@ -95,27 +113,38 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 p-4 font-sans text-gray-800">
-      
+    <div
+      className="min-h-screen flex flex-col items-center justify-center p-4 font-sans text-gray-800 bg-cover bg-center"
+      style={{ backgroundImage: "url('/itsurentrada.jpg')" }}
+    >
       {/* Título Principal */}
-      <h1 className="text-3xl font-bold mb-8 text-blue-600">Traductor LSM Bidireccional</h1>
+      <h1 className="text-3xl font-bold mb-8 text-black-600">
+        Traductor LSM Bidireccional
+      </h1>
 
       {/* --- CONTENEDOR PRINCIPAL (Dos Paneles) --- */}
       <div className="relative flex flex-col md:flex-row items-center gap-6 w-full max-w-5xl">
-        
         {/* === PANEL IZQUIERDO: TEXTO / RESULTADO === */}
-        <div className={`flex-1 p-6 rounded-xl shadow-lg transition-all duration-500 w-full h-64 flex flex-col ${isSwapped ? "order-2 bg-white border-2 border-blue-500" : "order-1 bg-white"}`}>
+        <div
+          className={`flex-1 p-6 rounded-xl shadow-lg transition-all duration-500 w-full h-64 flex flex-col ${
+            isSwapped
+              ? "order-2 bg-yellow-300/80" //  AQUÍ cambias el gris
+              : "order-1 bg-green-300/80" // AQUÍ cambias el verde
+          }`}
+        >
           <h2 className="text-xl font-bold mb-4 text-center">Español</h2>
-          
+
           {isSwapped ? (
             // VISTA RESULTADO (Modo Cámara)
             <div className="flex-1 flex items-center justify-center bg-gray-50 rounded-lg border border-gray-200">
-               <p className="text-4xl font-extrabold text-green-600 animate-pulse text-center">
-                  {/* Aquí mostramos lo que dice la IA */}
-                  {signPrediction === '...' 
-                      ? (isCameraLoading ? 'Analizando...' : 'Presiona Iniciar') 
-                      : signPrediction.toUpperCase()}
-               </p>
+              <p className="text-4xl font-extrabold text-green-600 animate-pulse text-center">
+                {/* Aquí mostramos lo que dice la IA */}
+                {signPrediction === "..."
+                  ? isCameraLoading
+                    ? "Analizando..."
+                    : "Presiona Iniciar"
+                  : signPrediction.toUpperCase()}
+              </p>
             </div>
           ) : (
             // VISTA INPUT (Modo Texto)
@@ -141,12 +170,25 @@ export default function App() {
         </div>
         {/* Botón swap para móvil (posición relativa) */}
         <div className="md:hidden">
-           <button onClick={handleSwap} className="bg-blue-600 text-white p-3 rounded-full mb-4"><FiRefreshCw size={24} /></button>
+          <button
+            onClick={handleSwap}
+            className="bg-blue-600 text-white p-3 rounded-full mb-4"
+          >
+            <FiRefreshCw size={24} />
+          </button>
         </div>
 
         {/* === PANEL DERECHO: VISUAL (VIDEO / CÁMARA) === */}
-        <div className={`flex-1 p-6 rounded-xl shadow-lg transition-all duration-500 w-full h-80 flex flex-col ${isSwapped ? "order-1 bg-white" : "order-2 bg-white"}`}>
-          <h2 className="text-xl font-bold mb-4 text-center">Lengua de Señas</h2>
+        <div
+          className={`flex-1 p-6 rounded-xl shadow-lg transition-all duration-500 w-full h-80 flex flex-col ${
+            isSwapped
+              ? "order-1 bg-green-300/80" //  AQUÍ cambias el verde
+              : "order-2 bg-yellow-300/80" //  AQUÍ cambias el gris
+          }`}
+        >
+          <h2 className="text-xl font-bold mb-4 text-center">
+            Lengua de Señas
+          </h2>
 
           {isSwapped ? (
             // VISTA CÁMARA (IA)
@@ -158,7 +200,9 @@ export default function App() {
                 muted
                 className="absolute w-full h-full object-cover transform scale-x-[-1]" // Espejo
               ></video>
-              {!isCameraLoading && <span className="text-gray-500">Cámara apagada</span>}
+              {!isCameraLoading && (
+                <span className="text-gray-500">Cámara apagada</span>
+              )}
             </div>
           ) : (
             // VISTA REPRODUCTOR VIDEO
@@ -181,11 +225,10 @@ export default function App() {
             </div>
           )}
         </div>
-
       </div>
 
       {/* --- MENSAJES Y CONTROLES INFERIORES --- */}
-      
+
       {/* Mensaje de Error */}
       {errorMessage && (
         <div className="mt-4 p-3 bg-red-100 text-red-700 rounded-lg font-medium border border-red-200">
@@ -198,7 +241,7 @@ export default function App() {
         onClick={handleTranslate}
         disabled={isModelLoading || (isCameraLoading && isSwapped)}
         className={`mt-8 px-10 py-3 rounded-full font-bold text-lg shadow-md transition-transform transform active:scale-95 ${
-          isModelLoading 
+          isModelLoading
             ? "bg-gray-400 cursor-not-allowed text-gray-200"
             : "bg-gradient-to-r from-blue-500 to-indigo-600 text-white hover:from-blue-600 hover:to-indigo-700"
         }`}
@@ -215,7 +258,6 @@ export default function App() {
           Detener Cámara
         </button>
       )}
-
     </div>
   );
 }

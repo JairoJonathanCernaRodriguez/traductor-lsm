@@ -115,7 +115,10 @@ export default function App() {
   return (
     <div
       className="min-h-screen flex flex-col items-center justify-center p-4 font-sans text-gray-800 bg-cover bg-center"
-      style={{ backgroundImage: "url('/itsurentrada.jpg')" }}
+      style={{
+        backgroundImage: "url('/itsurjardin.jpeg')",
+        backgroundSize: "100%",
+      }}
     >
       {/* Título Principal */}
       <h1 className="text-3xl font-bold mb-8 text-black-600">
